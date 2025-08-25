@@ -28,5 +28,5 @@ app.use("/uploads", express.static("uploads"));
 // Sunucu
 const PORT = process.env.PORT || 4565;
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`✅ Server çalışıyor: http://localhost:${PORT}`);
+    console.log(`✅ Server çalışıyor : http://localhost:${PORT}`);
 });
