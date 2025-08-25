@@ -1,0 +1,94 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Hikaye - Future Imperfect</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body class="single is-preload">
+
+    <div id="wrapper">
+
+        <!-- Header -->
+        <header id="header">
+            <h1><a href="index.html">Future Imperfect</a></h1>
+            <!-- Menü buraya -->
+        </header>
+
+        <!-- Main -->
+        <div id="main">
+            <!-- Post -->
+            <article class="post" id="single-post">
+                <!-- Burayı JS dolduracak -->
+            </article>
+        </div>
+
+        <!-- Footer -->
+        <section id="footer">
+            <!-- footer içeriği -->
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/browser.min.js"></script>
+    <script src="assets/js/breakpoints.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <script src="assets/js/main.js"></script>
+	<script src="assets/js/single.js"></script>
+
+
+    <script>
+        async function loadSinglePost() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+
+            if (!id) {
+                document.getElementById('single-post').innerHTML = '<p>Hikaye ID bulunamadı.</p>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/posts/${id}`);
+                if (!res.ok) {
+                    document.getElementById('single-post').innerHTML = '<p>Hikaye bulunamadı.</p>';
+                    return;
+                }
+                const post = await res.json();
+
+                document.getElementById('single-post').innerHTML = `
+                    <header>
+                        <div class="title">
+                            <h2>${post.title}</h2>
+                            <p>${post.content.substring(0, 120)}...</p>
+                        </div>
+                        <div class="meta">
+                            <time class="published" datetime="${post.created_at}">
+                                ${new Date(post.created_at).toLocaleDateString()}
+                            </time>
+                            <a href="#" class="author"><span class="name">${post.author}</span><img src="images/avatar.jpg" alt="" /></a>
+                        </div>
+                    </header>
+                    <span class="image featured"><img src="images/pic01.jpg" alt="" /></span>
+                    <p>${post.content}</p>
+                    <footer>
+                        <ul class="stats">
+                            <li><a href="#">General</a></li>
+                            <li><a href="#" class="icon solid fa-heart">28</a></li>
+                            <li><a href="#" class="icon solid fa-comment">128</a></li>
+                        </ul>
+                    </footer>
+                `;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('single-post').innerHTML = '<p>Bir hata oluştu.</p>';
+            }
+        }
+
+        loadSinglePost();
+    </script>
+	
+
+</body>
+</html>
