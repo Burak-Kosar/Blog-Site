@@ -13,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async (e) => {
       e.preventDefault();
-
       if (token) {
         await fetch("http://localhost:4565/logout", {
           method: "POST",
@@ -23,17 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
           },
         });
       }
-
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
       alert("Çıkış yapıldı");
       window.location.href = "login.html";
     });
   }
 
   // 🔹 Quill editörü
-  let quill = new Quill("#content", {
+  const quill = new Quill("#editor", {
     theme: "snow",
     placeholder: "İçeriği buraya yazınız...",
     modules: {
@@ -53,34 +50,25 @@ document.addEventListener("DOMContentLoaded", () => {
   if (addPostForm) {
     addPostForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const title = document.getElementById("title").value;
-      const status = document.getElementById("status").value;
-      const content = quill.root.innerHTML;
-
-      // ✅ FormData kullanıyoruz
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("content", content);
-      formData.append("status", status);
-
-      const imageFile = document.getElementById("image").files[0];
-      if (imageFile) {
-        formData.append("image", imageFile);
-      }
+      document.getElementById("content").value = quill.root.innerHTML;
+      const formData = new FormData(addPostForm);
 
       const res = await fetch("http://localhost:4565/posts", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`, // ✅ Content-Type eklemiyoruz!
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
       if (res.ok) {
-        alert("Post eklendi!");
-        loadMyPosts();
+        const status = formData.get("status");
+        alert(
+          status === "draft"
+            ? "Post taslak olarak kaydedildi!"
+            : "Post yayınlandı!"
+        );
         addPostForm.reset();
         quill.setContents([]);
+        loadMyPosts();
       } else {
         const data = await res.json();
         alert(data.error || "Bir hata oluştu");
@@ -93,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const url = isAdmin()
       ? "http://localhost:4565/all-posts"
       : "http://localhost:4565/my-posts";
-
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -121,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 : ""
             }
         </td>
-    `;
+      `;
       tableBody.appendChild(tr);
     });
 
@@ -165,93 +152,108 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 🔹 Düzenleme
+  // 🔹 Düzenleme (taslak veya yayınlanmış farketmez)
   async function openEditForm(id) {
-    const res = await fetch(`http://localhost:4565/posts/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      alert("Post bulunamadı");
-      return;
-    }
-    const post = await res.json();
-
-    const row = document
-      .querySelector(`button.editBtn[data-id="${id}"]`)
-      .closest("tr");
-    const editRow = document.createElement("tr");
-    editRow.innerHTML = `
-            <td colspan="5">
-                <div class="edit-form">
-                    <label>Başlık</label>
-                    <input type="text" id="editTitle" value="${post.title}">
-                    
-                    <label>İçerik</label>
-                    <div id="editQuill"></div>
-                    
-                    <label>Durum</label>
-                    <select id="editStatus">
-                        <option value="draft" ${
-                          post.status === "draft" ? "selected" : ""
-                        }>Taslak</option>
-                        <option value="published" ${
-                          post.status === "published" ? "selected" : ""
-                        }>Yayınla</option>
-                    </select>
-                    <button id="saveEditBtn">Kaydet</button>
-                    <button id="cancelEditBtn">İptal</button>
-                </div>
-            </td>
-        `;
-    row.insertAdjacentElement("afterend", editRow);
-
-    // ✅ Quill editörü düzenleme için initialize
-    let editQuill = new Quill("#editQuill", {
-      theme: "snow",
-      modules: {
-        toolbar: [
-          ["bold", "italic", "underline", "strike"],
-          [{ header: [1, 2, 3, false] }],
-          [{ list: "ordered" }, { list: "bullet" }],
-          ["blockquote", "code-block"],
-          ["link"],
-          ["clean"],
-        ],
-      },
-    });
-    editQuill.root.innerHTML = post.content;
-
-    document.getElementById("cancelEditBtn").addEventListener("click", () => {
-      editRow.remove();
-    });
-
-    document
-      .getElementById("saveEditBtn")
-      .addEventListener("click", async () => {
-        const updatedTitle = document.getElementById("editTitle").value;
-        const updatedContent = editQuill.root.innerHTML;
-        const updatedStatus = document.getElementById("editStatus").value;
-
-        const updateRes = await fetch(`http://localhost:4565/posts/${id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: updatedTitle,
-            content: updatedContent,
-            status: updatedStatus,
-          }),
-        });
-        if (updateRes.ok) {
-          alert("Post güncellendi!");
-          loadMyPosts();
-        } else {
-          const data = await updateRes.json();
-          alert(data.error || "Güncelleme hatası");
-        }
+    try {
+      const res = await fetch(`http://localhost:4565/posts/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || "Post bulunamadı");
+        return;
+      }
+
+      const post = await res.json();
+
+      if (!post || (post.author !== user.username && !isAdmin())) {
+        alert("Post bulunamadı veya yetkiniz yok");
+        return;
+      }
+
+      const row = document
+        .querySelector(`button.editBtn[data-id="${id}"]`)
+        .closest("tr");
+      const editRow = document.createElement("tr");
+      editRow.innerHTML = `
+        <td colspan="5">
+          <div class="edit-form">
+            <label>Başlık</label>
+            <input type="text" id="editTitle" value="${post.title}">
+            <label>İçerik</label>
+            <div id="editQuill"></div>
+            <label>Durum</label>
+            <select id="editStatus">
+              <option value="draft" ${
+                post.status === "draft" ? "selected" : ""
+              }>Taslak</option>
+              <option value="published" ${
+                post.status === "published" ? "selected" : ""
+              }>Yayınla</option>
+            </select>
+            <button id="saveEditBtn">Kaydet</button>
+            <button id="cancelEditBtn">İptal</button>
+          </div>
+        </td>
+      `;
+      row.insertAdjacentElement("afterend", editRow);
+
+      const editQuill = new Quill("#editQuill", {
+        theme: "snow",
+        modules: {
+          toolbar: [
+            ["bold", "italic", "underline", "strike"],
+            [{ header: [1, 2, 3, false] }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            ["blockquote", "code-block"],
+            ["link"],
+            ["clean"],
+          ],
+        },
+      });
+      editQuill.root.innerHTML = post.content;
+
+      document.getElementById("cancelEditBtn").addEventListener("click", () => {
+        editRow.remove();
+      });
+
+      document
+        .getElementById("saveEditBtn")
+        .addEventListener("click", async () => {
+          const updatedTitle = document.getElementById("editTitle").value;
+          const updatedContent = editQuill.root.innerHTML;
+          const updatedStatus = document.getElementById("editStatus").value;
+
+          const updateRes = await fetch(`http://localhost:4565/posts/${id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              title: updatedTitle,
+              content: updatedContent,
+              status: updatedStatus,
+            }),
+          });
+
+          if (updateRes.ok) {
+            alert(
+              updatedStatus === "draft"
+                ? "Post taslak olarak kaydedildi!"
+                : "Post yayınlandı!"
+            );
+            loadMyPosts();
+            editRow.remove();
+          } else {
+            const data = await updateRes.json();
+            alert(data.error || "Güncelleme hatası");
+          }
+        });
+    } catch (err) {
+      console.error(err);
+      alert("Sunucu hatası");
+    }
   }
 
   function isAdmin() {

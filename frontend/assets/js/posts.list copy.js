@@ -7,38 +7,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const limit = 6;
     const API_BASE = "http://localhost:4565";
 
-    // Snippet için düz metin
-    function getSnippet(html, length = 100) {
+    // HTML etiketlerini temizleyen fonksiyon (snippet için)
+    function stripHtml(html) {
         const tmp = document.createElement("div");
         tmp.innerHTML = html;
-        return (tmp.textContent || tmp.innerText || "").substring(0, length) + "...";
-    }
-
-    // HTML içeriğini kısalt, etiketleri koru
-    function getContentPreview(html, maxLength = 300) {
-        const div = document.createElement("div");
-        div.innerHTML = html;
-
-        let charCount = 0;
-        function truncateNode(node) {
-            if (charCount >= maxLength) {
-                node.remove();
-                return;
-            }
-            if (node.nodeType === Node.TEXT_NODE) {
-                if (charCount + node.nodeValue.length > maxLength) {
-                    node.nodeValue = node.nodeValue.substring(0, maxLength - charCount) + "...";
-                    charCount = maxLength;
-                } else {
-                    charCount += node.nodeValue.length;
-                }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                Array.from(node.childNodes).forEach(truncateNode);
-            }
-        }
-
-        Array.from(div.childNodes).forEach(truncateNode);
-        return div.innerHTML;
+        return tmp.textContent || tmp.innerText || "";
     }
 
     async function loadPosts(page = 1) {
@@ -58,14 +31,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 article.classList.add("post");
 
                 const imageSrc = post.image ? post.image.replace(/\\/g, "/") : "images/pic07.jpg";
-                const snippetText = getSnippet(post.content, 100);       // düz metin snippet
-                const contentPreview = getContentPreview(post.content, 300); // HTML etiketli içerik
+
+                // Preview snippet için kısa metin
+                const previewText = stripHtml(post.content).substring(0, 100) + "...";
+
+                // Post içeriği HTML olarak korunuyor
+                const contentHtml = post.content;
 
                 article.innerHTML = `
                     <header>
                         <div class="title">
                             <h2><a href="single.html?id=${post.id}">${post.title}</a></h2>
-                            <p>${snippetText}</p>
+                            <p>${previewText}</p>
                         </div>
                         <div class="meta">
                             <time class="published">${new Date(post.created_at).toLocaleDateString()}</time>
@@ -78,7 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     <a href="single.html?id=${post.id}" class="image featured">
                         <img src="${imageSrc}" alt="">
                     </a>
-                    <div class="content-preview">${contentPreview}</div>
+                    <div class="post-content">
+                        ${contentHtml}
+                    </div>
                     <footer>
                         <ul class="actions">
                             <li><a href="single.html?id=${post.id}" class="button large">Devamını Oku</a></li>

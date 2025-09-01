@@ -17,31 +17,33 @@
 
     <style>
       #wrapper {
-        padding-right: 3em;
-        padding-left: 0.89em;
-        padding-bottom: 3em;
-        padding-top: 3em;
+        padding: 3em 0.89em 3em 0.89em;
       }
+
       #sidebar {
         margin-right: 1em;
         min-width: 15em;
         width: 22em;
       }
+
       .dashboard-container {
         padding: 2rem;
         background: #fff;
       }
+
       .dashboard-form {
         background: #f9f9f9;
         padding: 2rem;
         margin-bottom: 2rem;
         border-radius: 6px;
       }
+
       .dashboard-form label {
         display: block;
         font-weight: bold;
         margin-top: 1rem;
       }
+
       .dashboard-form input,
       .dashboard-form select {
         width: 100%;
@@ -50,9 +52,11 @@
         border: 1px solid #ddd;
         border-radius: 4px;
       }
+
       .dashboard-form button {
         margin-top: 1rem;
       }
+
       #editor {
         background: #fff;
         min-height: 200px;
@@ -60,19 +64,108 @@
         border-radius: 4px;
         padding: 0.5rem;
       }
+
       table {
         width: 100%;
         border-collapse: collapse;
       }
+
       table th,
       table td {
         padding: 0.75rem;
         border: 1px solid #ddd;
       }
+
       table th {
         background: #f2f2f2;
         text-align: left;
       }
+
+      /* =======================
+         Mobil Uyumlu Düzenlemeler
+         ======================= */
+      @media (max-width: 768px) {
+        #wrapper {
+          padding: 1em;
+        }
+
+        #main {
+          width: 100%;
+          padding: 0;
+        }
+
+        #sidebar {
+          width: 100%;
+          margin: 0 0 2rem 0;
+        }
+
+        /* Tabloyu blok hâline getir ve kart görünümü */
+        .dashboard-container table,
+        .dashboard-container thead,
+        .dashboard-container tbody,
+        .dashboard-container th,
+        .dashboard-container td,
+        .dashboard-container tr {
+          display: block;
+        }
+
+        .dashboard-container thead tr {
+          display: none; /* başlık satırını gizle */
+        }
+
+        .dashboard-container tr {
+          margin-bottom: 1rem;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 0.5rem;
+          background: #fefefe;
+        }
+
+        .dashboard-container td {
+          padding-left: 10%;
+          position: relative;
+          text-align: left;
+          white-space: normal;
+        }
+
+        .dashboard-container td::before {
+          content: attr(data-label);
+          position: absolute;
+          left: 0;
+          width: 45%;
+          padding-left: 0.5rem;
+          font-weight: bold;
+        }
+      }
+      /* Yeni Yazı Formu Mobil Düzenlemeleri */
+@media (max-width: 768px) {
+    .dashboard-form {
+        padding: 1rem;
+    }
+
+    .dashboard-form label {
+        font-size: 0.95rem;
+    }
+
+    .dashboard-form input,
+    .dashboard-form select,
+    .dashboard-form button {
+        font-size: 0.9rem;
+    }
+
+    /* Quill editör mobilde tam genişlik ve daha yüksek */
+    #editor {
+        min-height: 250px;
+        max-width: 100%;
+        font-size: 0.95rem;
+    }
+
+    .dashboard-form button {
+        width: 100%;
+        padding: 0.75rem;
+    }
+}
+
     </style>
   </head>
   <body class="is-preload">
@@ -94,19 +187,18 @@
           <h2>Yeni Yazı Ekle / Düzenle</h2>
           <form class="dashboard-form" id="addPostForm">
             <label for="title">Başlık</label>
-            <label for="image">Kapak Resmi</label>
-            <input type="file" id="image" name="image" accept="image/*" />
             <input
               type="text"
               id="title"
               name="title"
               placeholder="Başlık giriniz"
             />
+            <label for="image">Kapak Resmi</label>
+            <input type="file" id="image" name="image" accept="image/*" />
 
             <label for="content">İçerik</label>
             <!-- ✅ Quill editör için div -->
             <div id="editor"></div>
-            <!-- ✅ Gizli input (Quill içeriği buraya aktarılacak) -->
             <input type="hidden" id="content" name="content" />
 
             <label for="status">Durum</label>
@@ -131,6 +223,16 @@
             </thead>
             <tbody id="myPostsTable">
               <!-- JS ile doldurulacak -->
+              <tr>
+                <td data-label="Başlık">Örnek Yazı 1</td>
+                <td data-label="Durum">Yayınlandı</td>
+                <td data-label="Oluşturulma">26.08.2025</td>
+                <td data-label="Yazar">Admin</td>
+                <td data-label="İşlemler">
+                  <button>Düzenle</button>
+                  <button>Sil</button>
+                </td>
+              </tr>
             </tbody>
           </table>
         </section>

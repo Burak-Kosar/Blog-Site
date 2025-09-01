@@ -1,44 +1,114 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Post Detay</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="assets/css/main.css">
+  <title>Post Detay - MyBLOG</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body class="is-preload">
-
-<div id="wrapper">
-    <!-- Header -->
+  <div id="wrapper">
     <header id="header">
-        <h1><a href="index.html">Future Imperfect</a></h1>
+      <h1><a href="index.html">MyBLOG</a></h1>
+      <nav class="main">
+        <ul>
+          <li class="search">
+            <a class="fa-search" href="#search">Search</a>
+            <form id="search" method="get" action="#">
+              <input type="text" name="query" placeholder="Search posts..." />
+            </form>
+          </li>
+        </ul>
+      </nav>
     </header>
 
-    <!-- Main -->
     <div id="main">
-        <section id="single-post"></section>
-
-        <ul class="actions pagination" id="post-navigation">
-            <li><a href="#" id="prev-post" class="button large previous">Previous</a></li>
-            <li><a href="#" id="next-post" class="button large next">Next</a></li>
-        </ul>
+      <div id="single-post"></div>
+      <ul id="post-navigation" class="actions pagination">
+        <li><a id="prev-post" href="#" class="disabled button large previous">Önceki</a></li>
+        <li><a id="next-post" href="#" class="disabled button large next">Sonraki</a></li>
+      </ul>
     </div>
 
     <!-- Sidebar -->
-    <section id="sidebar">
-        <section class="blurb">
-            <h2>About</h2>
-            <p>Bu kısım sabit sidebar içeriği olabilir.</p>
+      <section id="sidebar">
+        <!-- Intro -->
+        <section id="intro">
+          <a href="#" class="logo"><img src="images/logo.jpg" alt="" /></a>
+          <header>
+            <h2>My Blogs</h2>
+          </header>
         </section>
-    </section>
-</div>
 
-<script src="assets/js/jquery.min.js"></script>
-<script src="assets/js/browser.min.js"></script>
-<script src="assets/js/breakpoints.min.js"></script>
-<script src="assets/js/util.js"></script>
-<script src="assets/js/main.js"></script>
-<script src="assets/js/post.single.js"></script>
-<script src="assets/js/config.js"></script>
+        <!-- Mini Posts -->
+        <section>
+          <div class="mini-posts"></div>
+        </section>
+
+        <!-- Posts List -->
+        <section>
+          <ul class="posts"></ul>
+        </section>
+
+        <!-- About -->
+        <section class="blurb">
+          <h2>Hakkımda</h2>
+          <p>
+            Bu blogda ağırlıklı olarak kendi yazdığım hikayeleri paylaşıyorum.
+            Amacım, farklı dünyalara açılan kapılar sunmak ve okurlarla birlikte
+            hayal gücümüzü geliştirmek...
+          </p>
+          <ul class="actions">
+            <li><a href="#" class="button">Daha Fazla</a></li>
+          </ul>
+        </section>
+
+        <!-- Footer -->
+        <section id="footer">
+          <ul class="icons">
+            <li>
+              <a href="#" class="icon brands fa-twitter"
+                ><span class="label">Twitter</span></a
+              >
+            </li>
+            <li>
+              <a href="#" class="icon brands fa-facebook-f"
+                ><span class="label">Facebook</span></a
+              >
+            </li>
+            <li>
+              <a href="#" class="icon brands fa-instagram"
+                ><span class="label">Instagram</span></a
+              >
+            </li>
+            <li>
+              <a href="#" class="icon solid fa-rss"
+                ><span class="label">RSS</span></a
+              >
+            </li>
+            <li>
+              <a href="#" class="icon solid fa-envelope"
+                ><span class="label">Email</span></a
+              >
+            </li>
+          </ul>
+          <p class="copyright">
+            &copy; Untitled. Design: <a href="http://html5up.net">HTML5 UP</a>.
+            Images: <a href="http://unsplash.com">Unsplash</a>.
+          </p>
+        </section>
+      </section>
+  </div>
+
+  <!-- Scripts -->
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/browser.min.js"></script>
+    <script src="assets/js/breakpoints.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/posts.list.js"></script>
+    <script src="assets/js/post.single.js"></script>
+    <script src="assets/js/mini.posts.js"></script>
+    <script src="assets/js/config.js"></script>
 </body>
 </html>

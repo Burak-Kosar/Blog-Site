@@ -6,6 +6,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevBtn = document.getElementById("prev-post");
     const nextBtn = document.getElementById("next-post");
 
+    function stripHtml(html) {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || "";
+    }
+
     if (!postId) {
         postContainer.innerHTML = "<p>Hikaye bulunamadı.</p>";
         document.getElementById("post-navigation").style.display = "none";
@@ -21,24 +27,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
+            const imageSrc = post.image ? post.image.replace(/\\/g, "/") : "images/pic07.jpg";
+            const previewText = stripHtml(post.content).substring(0, 100) + "...";
+
             postContainer.innerHTML = `
                 <article class="post">
                     <header>
                         <div class="title">
                             <h2>${post.title}</h2>
-                            <p>${post.content.substring(0, 100)}...</p>
+                            <p>${previewText}</p>
                         </div>
                         <div class="meta">
                             <time class="published">${new Date(post.created_at).toLocaleDateString()}</time>
-                            <a href="#" class="author"><span class="name">${post.author}</span><img src="images/avatar.jpg" alt="" /></a>
+                            <a href="#" class="author">
+                                <span class="name">${post.author}</span>
+                                <img src="images/avatar.jpg" alt="" />
+                            </a>
                         </div>
                     </header>
-                    <a href="#" class="image featured"><img src="images/pic01.jpg" alt=""></a>
+                    <a href="#" class="image featured"><img src="${imageSrc}" alt=""></a>
                     <p>${post.content}</p>
                 </article>
             `;
 
-            // Önceki & Sonraki Post Bağlantıları
             if (post.prevId) {
                 prevBtn.href = `single.html?id=${post.prevId}`;
                 prevBtn.classList.remove("disabled");
