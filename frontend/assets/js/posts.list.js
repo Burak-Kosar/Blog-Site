@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let currentPage = 1;
     const limit = 6;
-    const API_BASE = "http://localhost:4565";
+    const API_BASE = "http://192.168.1.108:4565";
 
     // Snippet için düz metin
     function getSnippet(html, length = 100) {
@@ -58,8 +58,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 article.classList.add("post");
 
                 const imageSrc = post.image ? post.image.replace(/\\/g, "/") : "images/pic07.jpg";
-                const snippetText = getSnippet(post.content, 100);       // düz metin snippet
-                const contentPreview = getContentPreview(post.content, 300); // HTML etiketli içerik
+                const snippetText = getSnippet(post.content, 50);       // düz metin snippet
+                const contentPreview = getContentPreview(post.content, 200); // HTML etiketli içerik
 
                 article.innerHTML = `
                     <header>

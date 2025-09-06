@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     logoutBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       if (token) {
-        await fetch("http://localhost:4565/logout", {
+        await fetch("http://192.168.1.108:4565/logout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("content").value = quill.root.innerHTML;
       const formData = new FormData(addPostForm);
 
-      const res = await fetch("http://localhost:4565/posts", {
+      const res = await fetch("http://192.168.1.108:4565/posts", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -79,8 +79,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // 🔹 Postları yükle
   async function loadMyPosts() {
     const url = isAdmin()
-      ? "http://localhost:4565/all-posts"
-      : "http://localhost:4565/my-posts";
+      ? "http://192.168.1.108:4565/all-posts"
+      : "http://192.168.1.108:4565/my-posts";
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -124,7 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function publishPost(id) {
-    const res = await fetch(`http://localhost:4565/posts/${id}/publish`, {
+    const res = await fetch(`http://192.168.1.108:4565/${id}/publish`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function deletePost(id) {
     if (!confirm("Bu postu silmek istediğinize emin misiniz?")) return;
-    const res = await fetch(`http://localhost:4565/posts/${id}`, {
+    const res = await fetch(`http://192.168.1.108:4565/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 🔹 Düzenleme (taslak veya yayınlanmış farketmez)
   async function openEditForm(id) {
     try {
-      const res = await fetch(`http://localhost:4565/posts/${id}`, {
+      const res = await fetch(`http://192.168.1.108:4565/posts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const updatedContent = editQuill.root.innerHTML;
           const updatedStatus = document.getElementById("editStatus").value;
 
-          const updateRes = await fetch(`http://localhost:4565/posts/${id}`, {
+          const updateRes = await fetch(`http://192.168.1.108:4565/${id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",

@@ -11,7 +11,11 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*', // tüm IP’lerden erişim için. Üretimde domain kullan.
+    credentials: true
+}));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 

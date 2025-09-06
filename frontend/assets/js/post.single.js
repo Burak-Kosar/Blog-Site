@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    fetch(`http://localhost:4565/posts/${postId}`)
+    fetch(`http://192.168.1.108:4565/posts/${postId}`)
         .then(res => res.json())
         .then(post => {
             if (post.error) {

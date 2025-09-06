@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const defaultImage = "images/pic07.jpg";
 
   // Son 1 post → Mini Posts
-  fetch("http://localhost:4565/posts?limit=1&page=1")
+  fetch("http://192.168.1.108:4565/posts?limit=1&page=1")
     .then(res => res.json())
     .then(data => {
       if (!data.posts || data.posts.length === 0) return;
@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
   // Son 5 post → Sidebar Posts List
-  fetch("http://localhost:4565/posts?limit=5&page=1")
+  fetch("http://192.168.1.108:4565/posts?limit=5&page=1")
     .then(res => res.json())
     .then(data => {
       if (!data.posts || data.posts.length === 0) return;
