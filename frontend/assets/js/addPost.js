@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        fetch("http://localhost:4565/posts", {
+        fetch("http://http://192.168.1.108:4565/posts", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
