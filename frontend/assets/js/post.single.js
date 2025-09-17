@@ -1,72 +1,73 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const params = new URLSearchParams(window.location.search);
-    const postId = params.get("id");
+  const API_BASE = window.APP_CONFIG?.API_BASE ?? "";
+  const params = new URLSearchParams(window.location.search);
+  const postId = params.get("id");
 
-    const postContainer = document.getElementById("single-post");
-    const prevBtn = document.getElementById("prev-post");
-    const nextBtn = document.getElementById("next-post");
+  const postContainer = document.getElementById("single-post");
+  const prevBtn = document.getElementById("prev-post");
+  const nextBtn = document.getElementById("next-post");
 
-    function stripHtml(html) {
-        const tmp = document.createElement("div");
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || "";
-    }
+  function stripHtml(html) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  }
 
-    if (!postId) {
+  if (!postId) {
+    postContainer.innerHTML = "<p>Hikaye bulunamadı.</p>";
+    document.getElementById("post-navigation").style.display = "none";
+    return;
+  }
+
+  fetch(`${API_BASE}/posts/${postId}`)
+    .then(res => res.json())
+    .then(post => {
+      if (post.error) {
         postContainer.innerHTML = "<p>Hikaye bulunamadı.</p>";
         document.getElementById("post-navigation").style.display = "none";
         return;
-    }
+      }
 
-    fetch(`http://192.168.1.108:4565/posts/${postId}`)
-        .then(res => res.json())
-        .then(post => {
-            if (post.error) {
-                postContainer.innerHTML = "<p>Hikaye bulunamadı.</p>";
-                document.getElementById("post-navigation").style.display = "none";
-                return;
-            }
+      const imageSrc = post.image ? post.image.replace(/\\/g, "/") : "images/pic07.jpg";
+      const previewText = stripHtml(post.content).substring(0, 100) + "...";
 
-            const imageSrc = post.image ? post.image.replace(/\\/g, "/") : "images/pic07.jpg";
-            const previewText = stripHtml(post.content).substring(0, 100) + "...";
+      postContainer.innerHTML = `
+        <article class="post">
+          <header>
+            <div class="title">
+              <h2>${post.title}</h2>
+              <p>${previewText}</p>
+            </div>
+            <div class="meta">
+              <time class="published">${new Date(post.created_at).toLocaleDateString()}</time>
+              <a href="#" class="author">
+                <span class="name">${post.author}</span>
+                <img src="images/avatar.jpg" alt="" />
+              </a>
+            </div>
+          </header>
+          <span class="image featured"><img src="${imageSrc}" alt=""></span>
+          <div class="content">${post.content || ""}</div>
+        </article>
+      `;
 
-            postContainer.innerHTML = `
-                <article class="post">
-                    <header>
-                        <div class="title">
-                            <h2>${post.title}</h2>
-                            <p>${previewText}</p>
-                        </div>
-                        <div class="meta">
-                            <time class="published">${new Date(post.created_at).toLocaleDateString()}</time>
-                            <a href="#" class="author">
-                                <span class="name">${post.author}</span>
-                                <img src="images/avatar.jpg" alt="" />
-                            </a>
-                        </div>
-                    </header>
-                    <a href="#" class="image featured"><img src="${imageSrc}" alt=""></a>
-                    <p>${post.content}</p>
-                </article>
-            `;
+      if (post.prevId) {
+        prevBtn.href = `single.html?id=${post.prevId}`;
+        prevBtn.classList.remove("disabled");
+      } else {
+        prevBtn.classList.add("disabled");
+      }
 
-            if (post.prevId) {
-                prevBtn.href = `single.html?id=${post.prevId}`;
-                prevBtn.classList.remove("disabled");
-            } else {
-                prevBtn.classList.add("disabled");
-            }
-
-            if (post.nextId) {
-                nextBtn.href = `single.html?id=${post.nextId}`;
-                nextBtn.classList.remove("disabled");
-            } else {
-                nextBtn.classList.add("disabled");
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            postContainer.innerHTML = "<p>Sunucu hatası.</p>";
-            document.getElementById("post-navigation").style.display = "none";
-        });
+      if (post.nextId) {
+        nextBtn.href = `single.html?id=${post.nextId}`;
+        nextBtn.classList.remove("disabled");
+      } else {
+        nextBtn.classList.add("disabled");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      postContainer.innerHTML = "<p>Sunucu hatası.</p>";
+      document.getElementById("post-navigation").style.display = "none";
+    });
 });

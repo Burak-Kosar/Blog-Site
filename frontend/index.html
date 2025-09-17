@@ -1,36 +1,16 @@
 <!DOCTYPE html>
-<!--
-	Future Imperfect by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
 <html>
   <head>
     <title>MyBLOG</title>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, user-scalable=no"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
     <link rel="stylesheet" href="assets/css/main.css" />
   </head>
   <body class="is-preload">
-    <!-- Wrapper -->
     <div id="wrapper">
-      <!-- Header -->
       <header id="header">
         <h1><a href="index.html">My Blogs</a></h1>
-        <nav class="links">
-         <!--
-          <ul>
-            <li><a href="#">Lorem</a></li>
-            <li><a href="#">Ipsum</a></li>
-            <li><a href="#">Feugiat</a></li>
-            <li><a href="#">Tempus</a></li>
-            <li><a href="#">Adipiscing</a></li>
-          </ul>
-          -->
-        </nav>
+        <nav class="links"></nav>
         <nav class="main">
           <ul>
             <li class="search">
@@ -39,53 +19,17 @@
                 <input type="text" name="query" placeholder="Search" />
               </form>
             </li>
-            <li class="menu">
-              <a class="fa-bars" href="#menu">Menu</a>
-            </li>
+            <li class="menu"><a class="fa-bars" href="#menu">Menu</a></li>
           </ul>
         </nav>
       </header>
 
-      <!-- Menu -->
       <section id="menu">
-        <!-- Search -->
         <section>
           <form class="search" method="get" action="#">
             <input type="text" name="query" placeholder="Search" />
           </form>
         </section>
-
-        <!-- Links 
-        <section>
-          <ul class="links">
-            <li>
-              <a href="#">
-                <h3>Lorem ipsum</h3>
-                <p>Feugiat tempus veroeros dolor</p>
-              </a>
-            </li>
-            <li>
-              <a href="#">
-                <h3>Dolor sit amet</h3>
-                <p>Sed vitae justo condimentum</p>
-              </a>
-            </li>
-            <li>
-              <a href="#">
-                <h3>Feugiat veroeros</h3>
-                <p>Phasellus sed ultricies mi congue</p>
-              </a>
-            </li>
-            <li>
-              <a href="#">
-                <h3>Etiam sed consequat</h3>
-                <p>Porta lectus amet ultricies</p>
-              </a>
-            </li>
-          </ul>
-        </section>
-      -->
-        <!-- Actions -->
         <section>
           <ul class="actions stacked">
             <li><a href="login.html" class="button large fit">Log In</a></li>
@@ -93,106 +37,57 @@
         </section>
       </section>
 
-      <!-- Main -->
       <div id="main">
-        <!-- Postlar buraya gelecek -->
         <section id="blog-posts">
-          <header class="major">
-            <h2>Hikayeler</h2>
-          </header>
+          <header class="major"><h2>Hikayeler</h2></header>
           <div id="posts-container" class="posts"></div>
         </section>
 
-        <!-- Pagination -->
         <ul class="actions pagination">
-          <li>
-            <a href="" class="disabled button large previous">Önceki Sayfa</a>
-          </li>
+          <li><a href="#" class="disabled button large previous">Önceki Sayfa</a></li>
           <li><a href="#" class="button large next">Sonraki Sayfa</a></li>
         </ul>
       </div>
 
-      <!-- Sidebar -->
       <section id="sidebar">
-        <!-- Intro -->
         <section id="intro">
           <a href="#" class="logo"><img src="images/logo.jpg" alt="" /></a>
-          <header>
-            <h2>My Blogs</h2>
-          </header>
+          <header><h2>My Blogs</h2></header>
         </section>
 
-        <!-- Mini Posts -->
-        <section>
-          <div class="mini-posts"></div>
-        </section>
+        <section><div class="mini-posts"></div></section>
+        <section><ul class="posts"></ul></section>
 
-        <!-- Posts List -->
-        <section>
-          <ul class="posts"></ul>
-        </section>
-
-        <!-- About -->
         <section class="blurb">
           <h2>Hakkımda</h2>
-          <p>
-            Bu blogda ağırlıklı olarak kendi yazdığım hikayeleri paylaşıyorum.
-            Amacım, farklı dünyalara açılan kapılar sunmak ve okurlarla birlikte
-            hayal gücümüzü geliştirmek...
-          </p>
-          <ul class="actions">
-            <li><a href="#" class="button">Daha Fazla</a></li>
-          </ul>
+          <p>Bu blogda ağırlıklı olarak kendi yazdığım hikayeleri paylaşıyorum...</p>
+          <ul class="actions"><li><a href="#" class="button">Daha Fazla</a></li></ul>
         </section>
 
-        <!-- Footer -->
         <section id="footer">
           <ul class="icons">
-            <li>
-              <a href="#" class="icon brands fa-twitter"
-                ><span class="label">Twitter</span></a
-              >
-            </li>
-            <li>
-              <a href="#" class="icon brands fa-facebook-f"
-                ><span class="label">Facebook</span></a
-              >
-            </li>
-            <li>
-              <a href="#" class="icon brands fa-instagram"
-                ><span class="label">Instagram</span></a
-              >
-            </li>
-            <li>
-              <a href="#" class="icon solid fa-rss"
-                ><span class="label">RSS</span></a
-              >
-            </li>
-            <li>
-              <a href="#" class="icon solid fa-envelope"
-                ><span class="label">Email</span></a
-              >
-            </li>
+            <li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>
+            <li><a href="#" class="icon brands fa-facebook-f"><span class="label">Facebook</span></a></li>
+            <li><a href="#" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
+            <li><a href="#" class="icon solid fa-rss"><span class="label">RSS</span></a></li>
+            <li><a href="#" class="icon solid fa-envelope"><span class="label">Email</span></a></li>
           </ul>
           <p class="copyright">
-            &copy; Untitled. Design: <a href="http://html5up.net">HTML5 UP</a>.
-            Images: <a href="http://unsplash.com">Unsplash</a>.
+            &copy; 2025 MyBLOG. Design: <a href="http://html5up.net">HTML5 UP</a>. Images: <a href="http://unsplash.com">Unsplash</a>.
           </p>
         </section>
       </section>
     </div>
 
-    <!-- Scripts -->
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/js/browser.min.js"></script>
     <script src="assets/js/breakpoints.min.js"></script>
     <script src="assets/js/util.js"></script>
     <script src="assets/js/main.js"></script>
-    <script src="assets/js/posts.list.js"></script>
-    <script src="assets/js/post.single.js"></script>
-    <script src="assets/js/mini.posts.js"></script>
-    <script src="assets/js/config.js"></script>
+
+    <!-- Doğru JS yolları -->
+    <script src="js/config.js"></script>
+    <script src="js/mini.post.js"></script>
+    <script src="js/post.list.js"></script>
   </body>
 </html>
-
-

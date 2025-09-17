@@ -1,4 +1,6 @@
 // config.js
-// Buradan API URL'sini tüm dosyalara yayacağız.
-const BASE_URL = "http://192.168.1.108:4565"; 
-// ileride bunu dinamik yapabilirsin, şimdilik env'yi okuyamıyoruz çünkü frontend düz html çalışıyor
+// Aynı origin: API_BASE = "" → fetch('/posts') çalışır.
+(function () {
+  const API_BASE = ""; // backend ve frontend aynı origin
+  window.APP_CONFIG = { API_BASE };
+})();

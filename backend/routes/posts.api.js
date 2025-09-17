@@ -81,9 +81,11 @@ router.post("/posts", authMiddleware, upload.single("image"), async (req, res) =
 
     if (req.file) {
       const outputPath = path.join("uploads", "resized-" + req.file.filename);
-      await sharp(req.file.path).resize(840, 340).toFile(outputPath);
+      await sharp(req.file.path)
+        .resize(840, 340, { fit: 'cover', position: 'center' })
+        .toFile(outputPath);
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-      imagePath = "/" + outputPath;
+      imagePath = "/" + outputPath.replace(/\\/g, "/");
     }
 
     const sql = `
@@ -171,7 +173,7 @@ router.patch("/posts/:id/publish", authMiddleware, (req, res) => {
     if (results.length === 0) return res.status(404).json({ error: "Post bulunamadı" });
 
     const updateSql = `UPDATE posts SET status = 'published', updated_at = NOW() WHERE id = ?`;
-    db.query(updateSql, [postId], (err2, result) => {
+    db.query(updateSql, [postId], (err2) => {
       if (err2) return res.status(500).json({ error: "Güncelleme hatası" });
       res.json({ success: true, message: "Post yayınlandı" });
     });
@@ -198,7 +200,7 @@ router.put("/posts/:id", authMiddleware, (req, res) => {
       SET title = ?, content = ?, status = ?, updated_at = NOW()
       WHERE id = ?
     `;
-    db.query(updateSql, [title, content, status, postId], (err2, result) => {
+    db.query(updateSql, [title, content, status, postId], (err2) => {
       if (err2) return res.status(500).json({ error: "Güncelleme hatası" });
       res.json({ success: true, message: "Post güncellendi" });
     });
@@ -216,12 +218,39 @@ router.delete("/posts/:id", authMiddleware, (req, res) => {
     if (results.length === 0) return res.status(404).json({ error: "Post bulunamadı" });
 
     const imagePath = results[0].image ? results[0].image.replace(/^\//, "") : null;
-    db.query(`DELETE FROM posts WHERE id = ?`, [postId], (err2, result) => {
+    db.query(`DELETE FROM posts WHERE id = ?`, [postId], (err2) => {
       if (err2) return res.status(500).json({ error: "Veritabanı hatası" });
 
-      if (imagePath && fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+      if (imagePath && fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
       res.json({ success: true, message: "Post silindi" });
     });
+  });
+});
+
+/**
+ * 🔐 Tekil post (auth) — sahibi veya admin görebilir (taslak dahil)
+ */
+router.get("/posts/:id/raw", authMiddleware, (req, res) => {
+  const postId = parseInt(req.params.id, 10);
+  const isAdmin = req.user.role === "admin";
+
+  const sql = isAdmin
+    ? `SELECT posts.*, users.username AS author
+       FROM posts JOIN users ON posts.author_id = users.id
+       WHERE posts.id = ?`
+    : `SELECT posts.*, users.username AS author
+       FROM posts JOIN users ON posts.author_id = users.id
+       WHERE posts.id = ? AND posts.author_id = ?`;
+
+  const params = isAdmin ? [postId] : [postId, req.user.id];
+
+  db.query(sql, params, (err, results) => {
+    if (err) return res.status(500).json({ error: "Veritabanı hatası" });
+    if (results.length === 0)
+      return res.status(404).json({ error: "Post bulunamadı veya yetkiniz yok" });
+    res.json(results[0]);
   });
 });
 

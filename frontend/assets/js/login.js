@@ -1,28 +1,27 @@
 document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+  e.preventDefault();
+  const API_BASE = window.APP_CONFIG?.API_BASE ?? "";
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
 
-    fetch('http://192.168.1.108:4565/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.token) {
-            // ✅ Hem token hem user kaydediyoruz
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-
-            window.location.href = 'dashboard.html';
-        } else {
-            alert(data.error || 'Giriş başarısız');
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Sunucu hatası, giriş yapılamadı.");
-    });
+  fetch(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      window.location.href = 'dashboard.html';
+    } else {
+      alert(data.error || 'Giriş başarısız');
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Sunucu hatası, giriş yapılamadı.");
+  });
 });

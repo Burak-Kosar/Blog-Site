@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user"));
+  const API_BASE = window.APP_CONFIG?.API_BASE ?? "";
 
   if (!token || !user) {
     alert("Önce giriş yapmalısınız");
@@ -14,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     logoutBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       if (token) {
-        await fetch("http://192.168.1.108:4565/logout", {
+        await fetch(`${API_BASE}/logout`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -53,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("content").value = quill.root.innerHTML;
       const formData = new FormData(addPostForm);
 
-      const res = await fetch("http://192.168.1.108:4565/posts", {
+      const res = await fetch(`${API_BASE}/posts`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -61,11 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (res.ok) {
         const status = formData.get("status");
-        alert(
-          status === "draft"
-            ? "Post taslak olarak kaydedildi!"
-            : "Post yayınlandı!"
-        );
+        alert(status === "draft" ? "Post taslak olarak kaydedildi!" : "Post yayınlandı!");
         addPostForm.reset();
         quill.setContents([]);
         loadMyPosts();
@@ -78,35 +75,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 🔹 Postları yükle
   async function loadMyPosts() {
-    const url = isAdmin()
-      ? "http://192.168.1.108:4565/all-posts"
-      : "http://192.168.1.108:4565/my-posts";
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const url = isAdmin() ? `${API_BASE}/all-posts` : `${API_BASE}/my-posts`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const posts = await res.json();
     const tableBody = document.getElementById("myPostsTable");
+    if (!tableBody) return;
     tableBody.innerHTML = "";
 
     posts.forEach((post) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${post.title}</td>
-        <td>${post.status}</td>
-        <td>${new Date(post.created_at).toLocaleDateString()}</td>
-        <td>${post.author}</td>
-        <td>
-            ${
-              post.status === "draft"
-                ? `<button class="publishBtn" data-id="${post.id}">Yayınla</button>`
-                : ""
-            }
-            <button class="editBtn" data-id="${post.id}">Düzenle</button>
-            ${
-              isAdmin()
-                ? `<button class="deleteBtn" data-id="${post.id}">Sil</button>`
-                : ""
-            }
+        <td data-label="Başlık">${post.title}</td>
+        <td data-label="Durum">${post.status}</td>
+        <td data-label="Oluşturulma">${new Date(post.created_at).toLocaleDateString()}</td>
+        <td data-label="Yazar">${post.author}</td>
+        <td data-label="İşlemler">
+          ${post.status === "draft" ? `<button class="publishBtn" data-id="${post.id}">Yayınla</button>` : ""}
+          <button class="editBtn" data-id="${post.id}">Düzenle</button>
+          ${isAdmin() ? `<button class="deleteBtn" data-id="${post.id}">Sil</button>` : ""}
         </td>
       `;
       tableBody.appendChild(tr);
@@ -124,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function publishPost(id) {
-    const res = await fetch(`http://192.168.1.108:4565/${id}/publish`, {
+    const res = await fetch(`${API_BASE}/posts/${id}/publish`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -139,7 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function deletePost(id) {
     if (!confirm("Bu postu silmek istediğinize emin misiniz?")) return;
-    const res = await fetch(`http://192.168.1.108:4565/${id}`, {
+    const res = await fetch(`${API_BASE}/posts/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -155,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 🔹 Düzenleme (taslak veya yayınlanmış farketmez)
   async function openEditForm(id) {
     try {
-      const res = await fetch(`http://192.168.1.108:4565/posts/${id}`, {
+      const res = await fetch(`${API_BASE}/posts/${id}/raw`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -171,9 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const row = document
-        .querySelector(`button.editBtn[data-id="${id}"]`)
-        .closest("tr");
+      const row = document.querySelector(`button.editBtn[data-id="${id}"]`).closest("tr");
       const editRow = document.createElement("tr");
       editRow.innerHTML = `
         <td colspan="5">
@@ -184,12 +168,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <div id="editQuill"></div>
             <label>Durum</label>
             <select id="editStatus">
-              <option value="draft" ${
-                post.status === "draft" ? "selected" : ""
-              }>Taslak</option>
-              <option value="published" ${
-                post.status === "published" ? "selected" : ""
-              }>Yayınla</option>
+              <option value="draft" ${post.status === "draft" ? "selected" : ""}>Taslak</option>
+              <option value="published" ${post.status === "published" ? "selected" : ""}>Yayınla</option>
             </select>
             <button id="saveEditBtn">Kaydet</button>
             <button id="cancelEditBtn">İptal</button>
@@ -217,39 +197,33 @@ document.addEventListener("DOMContentLoaded", () => {
         editRow.remove();
       });
 
-      document
-        .getElementById("saveEditBtn")
-        .addEventListener("click", async () => {
-          const updatedTitle = document.getElementById("editTitle").value;
-          const updatedContent = editQuill.root.innerHTML;
-          const updatedStatus = document.getElementById("editStatus").value;
+      document.getElementById("saveEditBtn").addEventListener("click", async () => {
+        const updatedTitle = document.getElementById("editTitle").value;
+        const updatedContent = editQuill.root.innerHTML;
+        const updatedStatus = document.getElementById("editStatus").value;
 
-          const updateRes = await fetch(`http://192.168.1.108:4565/${id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              title: updatedTitle,
-              content: updatedContent,
-              status: updatedStatus,
-            }),
-          });
-
-          if (updateRes.ok) {
-            alert(
-              updatedStatus === "draft"
-                ? "Post taslak olarak kaydedildi!"
-                : "Post yayınlandı!"
-            );
-            loadMyPosts();
-            editRow.remove();
-          } else {
-            const data = await updateRes.json();
-            alert(data.error || "Güncelleme hatası");
-          }
+        const updateRes = await fetch(`${API_BASE}/posts/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: updatedTitle,
+            content: updatedContent,
+            status: updatedStatus,
+          }),
         });
+
+        if (updateRes.ok) {
+          alert(updatedStatus === "draft" ? "Post taslak olarak kaydedildi!" : "Post yayınlandı!");
+          loadMyPosts();
+          editRow.remove();
+        } else {
+          const data = await updateRes.json();
+          alert(data.error || "Güncelleme hatası");
+        }
+      });
     } catch (err) {
       console.error(err);
       alert("Sunucu hatası");
