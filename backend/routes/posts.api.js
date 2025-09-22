@@ -74,36 +74,45 @@ router.get("/posts/:id", (req, res) => {
 /**
  * 3) Yeni post ekle (resimli)
  */
-router.post("/posts", authMiddleware, upload.single("image"), async (req, res) => {
-  try {
-    const { title, content, status } = req.body;
-    const authorId = req.user.id;
+router.post(
+  "/posts",
+  authMiddleware,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const { title, content, status } = req.body;
+      const authorId = req.user.id;
 
-    let imagePath = null;
-    if (req.file) {
-      const outputPath = path.join("uploads", "resized-" + req.file.filename);
-      await sharp(req.file.path).resize(840, 340).toFile(outputPath);
-      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-      imagePath = "/" + outputPath.replace(/\\/g, "/");
-    }
+      let imagePath = null;
+      if (req.file) {
+        const outputPath = path.join("uploads", "resized-" + req.file.filename);
+        await sharp(req.file.path).resize(840, 340).toFile(outputPath);
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        imagePath = "/" + outputPath.replace(/\\/g, "/");
+      }
 
-    const sql = `
+      const sql = `
       INSERT INTO posts (title, content, author_id, status, image, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, NOW(), NOW())
     `;
-    db.query(sql, [title, content, authorId, status, imagePath], (err, result) => {
-      if (err) return res.status(500).json({ error: "Veritabanı hatası" });
-      res.json({
-        message: "Post eklendi",
-        postId: result.insertId,
-        imageUrl: imagePath,
-      });
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Post eklenemedi" });
+      db.query(
+        sql,
+        [title, content, authorId, status, imagePath],
+        (err, result) => {
+          if (err) return res.status(500).json({ error: "Veritabanı hatası" });
+          res.json({
+            message: "Post eklendi",
+            postId: result.insertId,
+            imageUrl: imagePath,
+          });
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Post eklenemedi" });
+    }
   }
-});
+);
 
 /**
  * 4) Kullanıcının kendi postları
@@ -234,13 +243,17 @@ router.delete("/posts/:id", authMiddleware, (req, res) => {
     if (results.length === 0)
       return res.status(404).json({ error: "Post bulunamadı" });
 
-    const imagePath = results[0].image ? results[0].image.replace(/^\//, "") : null;
+    const imagePath = results[0].image
+      ? results[0].image.replace(/^\//, "")
+      : null;
 
     db.query(`DELETE FROM posts WHERE id = ?`, [postId], (err2) => {
       if (err2) return res.status(500).json({ error: "Veritabanı hatası" });
 
       if (imagePath && fs.existsSync(imagePath)) {
-        try { fs.unlinkSync(imagePath); } catch (_) {}
+        try {
+          fs.unlinkSync(imagePath);
+        } catch (_) {}
       }
 
       res.json({ success: true, message: "Post silindi" });
@@ -259,7 +272,9 @@ router.post("/posts/:id/request-delete", authMiddleware, (req, res) => {
   db.query(checkSql, [postId, req.user.id], (err, rows) => {
     if (err) return res.status(500).json({ error: "Veritabanı hatası" });
     if (rows.length === 0)
-      return res.status(404).json({ error: "Post bulunamadı veya yetkiniz yok" });
+      return res
+        .status(404)
+        .json({ error: "Post bulunamadı veya yetkiniz yok" });
 
     const post = rows[0];
 
@@ -271,7 +286,9 @@ router.post("/posts/:id/request-delete", authMiddleware, (req, res) => {
         // zaten kayıt var ise sadece yayından kaldırmayı garanti edelim
         const upd = `UPDATE posts SET status='draft', updated_at = NOW() WHERE id = ?`;
         return db.query(upd, [postId], () =>
-          res.json({ message: "Silme talebi zaten mevcut, post yayından kaldırıldı." })
+          res.json({
+            message: "Silme talebi zaten mevcut, post yayından kaldırıldı.",
+          })
         );
       }
 
@@ -281,13 +298,18 @@ router.post("/posts/:id/request-delete", authMiddleware, (req, res) => {
         VALUES (?, ?, ?, NULL)
       `;
       db.query(insSql, [post.id, post.author_id, req.user.id], (e3) => {
-        if (e3) return res.status(500).json({ error: "Silme talebi kaydedilemedi" });
+        if (e3) {
+          console.error("delete_requests insert error:", e3); // <--- TEŞHİS LOGU
+          return res.status(500).json({ error: "Silme talebi kaydedilemedi" });
+        }
 
         // Post'u anasayfadan kaldır (draft)
         const updSql = `UPDATE posts SET status='draft', updated_at = NOW() WHERE id = ?`;
         db.query(updSql, [post.id], (e4) => {
           if (e4) return res.status(500).json({ error: "Post güncellenemedi" });
-          return res.json({ message: "Silme talebi oluşturuldu, post yayından kaldırıldı." });
+          return res.json({
+            message: "Silme talebi oluşturuldu, post yayından kaldırıldı.",
+          });
         });
       });
     });
@@ -298,7 +320,8 @@ router.post("/posts/:id/request-delete", authMiddleware, (req, res) => {
  * 11) Admin: Bekleyen silme talepleri listesi
  */
 router.get("/delete-requests", authMiddleware, (req, res) => {
-  if (req.user.role !== "admin") return res.status(403).json({ error: "Yetkiniz yok" });
+  if (req.user.role !== "admin")
+    return res.status(403).json({ error: "Yetkiniz yok" });
 
   const sql = `
     SELECT dr.id AS request_id,
@@ -324,12 +347,14 @@ router.get("/delete-requests", authMiddleware, (req, res) => {
  * 12) Admin: Kalıcı sil (post + görsel + delete_requests kaydı)
  */
 router.delete("/posts/:id/permanent", authMiddleware, (req, res) => {
-  if (req.user.role !== "admin") return res.status(403).json({ error: "Yetkiniz yok" });
+  if (req.user.role !== "admin")
+    return res.status(403).json({ error: "Yetkiniz yok" });
   const postId = parseInt(req.params.id, 10);
 
   db.query(`SELECT image FROM posts WHERE id = ?`, [postId], (err, rows) => {
     if (err) return res.status(500).json({ error: "Veritabanı hatası" });
-    if (rows.length === 0) return res.status(404).json({ error: "Post bulunamadı" });
+    if (rows.length === 0)
+      return res.status(404).json({ error: "Post bulunamadı" });
 
     const imagePath = rows[0].image ? rows[0].image.replace(/^\//, "") : null;
 
@@ -337,12 +362,21 @@ router.delete("/posts/:id/permanent", authMiddleware, (req, res) => {
       if (e2) return res.status(500).json({ error: "Post silinemedi" });
 
       if (imagePath && fs.existsSync(imagePath)) {
-        try { fs.unlinkSync(imagePath); } catch (_) {}
+        try {
+          fs.unlinkSync(imagePath);
+        } catch (_) {}
       }
 
-      db.query(`DELETE FROM delete_requests WHERE post_id = ?`, [postId], () => {
-        return res.json({ success: true, message: "Post kalıcı olarak silindi." });
-      });
+      db.query(
+        `DELETE FROM delete_requests WHERE post_id = ?`,
+        [postId],
+        () => {
+          return res.json({
+            success: true,
+            message: "Post kalıcı olarak silindi.",
+          });
+        }
+      );
     });
   });
 });
