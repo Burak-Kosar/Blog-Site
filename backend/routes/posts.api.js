@@ -299,7 +299,7 @@ router.post("/posts/:id/request-delete", authMiddleware, (req, res) => {
       `;
       db.query(insSql, [post.id, post.author_id, req.user.id], (e3) => {
         if (e3) {
-          console.error("delete_requests insert error:", e3); // <--- TEŞHİS LOGU
+          //console.error("delete_requests insert error:", e3); // <--- TEŞHİS LOGU
           return res.status(500).json({ error: "Silme talebi kaydedilemedi" });
         }
 

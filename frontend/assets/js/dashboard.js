@@ -93,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ${
             isAdmin()
               ? `<button class="deleteBtn" data-id="${post.id}">Kalıcı Sil</button>`
-              : `<button class="requestDeleteBtn" data-id="${post.id}">Sil (Talep)</button>`
+              : `<button class="requestDeleteBtn" data-id="${post.id}">Sil </button>`
           }
         </td>
       `;
