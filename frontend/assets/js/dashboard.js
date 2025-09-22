@@ -8,7 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  const API_BASE = window.location.origin;
+  const API_BASE =
+    (window.APP_CONFIG && window.APP_CONFIG.API_BASE) || window.location.origin;
 
   // Logout
   const logoutBtn = document.getElementById("logoutBtn");
@@ -23,14 +24,15 @@ document.addEventListener("DOMContentLoaded", () => {
             Authorization: `Bearer ${token}`,
           },
         });
-      } catch (_) {}
+      } catch {}
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      alert("Çıkış yapıldı");
       window.location.href = "login.html";
     });
   }
 
-  // Quill editörü
+  // Quill
   const quill = new Quill("#editor", {
     theme: "snow",
     placeholder: "İçeriği buraya yazınız...",
@@ -46,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
   });
 
-  // Yeni Post ekleme (RESİMLİ)
+  // Yeni Post ekle (resimli)
   const addPostForm = document.getElementById("addPostForm");
   if (addPostForm) {
     addPostForm.addEventListener("submit", async (e) => {
@@ -60,7 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
         body: formData,
       });
 
-      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         const status = formData.get("status");
         alert(
@@ -72,12 +73,12 @@ document.addEventListener("DOMContentLoaded", () => {
         quill.setContents([]);
         loadMyPosts();
       } else {
+        const data = await res.json();
         alert(data.error || "Bir hata oluştu");
       }
     });
   }
 
-  // Postları yükle
   async function loadMyPosts() {
     const url = isAdmin() ? `${API_BASE}/all-posts` : `${API_BASE}/my-posts`;
     const res = await fetch(url, {
@@ -91,8 +92,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     posts.forEach((post) => {
       const tr = document.createElement("tr");
+      const canRequestDelete = !isAdmin() && post.author === user.username; // yazar kendi postunda talep edebilir
+      const adminOps = isAdmin();
+
       tr.innerHTML = `
-        <td data-label="Başlık">${post.title}</td>
+        <td data-label="Başlık">${post.title || "-"}</td>
         <td data-label="Durum">${post.status}</td>
         <td data-label="Oluşturulma">${new Date(
           post.created_at
@@ -106,38 +110,62 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           <button class="editBtn" data-id="${post.id}">Düzenle</button>
           ${
-            isAdmin()
-              ? `<button class="deleteBtn" data-id="${post.id}">Kalıcı Sil</button>`
-              : `<button class="requestDeleteBtn" data-id="${post.id}">Sil </button>`
+            adminOps
+              ? `<button class="deleteBtn" data-id="${post.id}">Sil</button>`
+              : canRequestDelete
+              ? `<button class="requestDeleteBtn" data-id="${post.id}">Sil (Talep)</button>`
+              : ""
           }
         </td>
       `;
       tableBody.appendChild(tr);
     });
 
-    // Butonlar
+    // Publish (taslaktan yayınla)
     document.querySelectorAll(".publishBtn").forEach((btn) => {
       btn.addEventListener("click", () => publishPost(btn.dataset.id));
     });
+
+    // Admin: kalıcı sil
     document.querySelectorAll(".deleteBtn").forEach((btn) => {
-      btn.addEventListener("click", () => adminPermanentDelete(btn.dataset.id));
+      btn.addEventListener("click", () => deletePost(btn.dataset.id));
     });
-    document.querySelectorAll(".requestDeleteBtn").forEach((btn) => {
-      btn.addEventListener("click", () => requestDeletePost(btn.dataset.id));
-    });
+
+    // Düzenle (modal satır)
     document.querySelectorAll(".editBtn").forEach((btn) => {
       btn.addEventListener("click", () => openEditForm(btn.dataset.id));
     });
 
-    // Admin ise silme taleplerini de getir
-    if (isAdmin()) {
-      document
-        .getElementById("deleteRequestsSection")
-        ?.classList.remove("hidden");
-      loadDeleteRequests();
-    } else {
-      document.getElementById("deleteRequestsSection")?.classList.add("hidden");
-    }
+    // Yazar: Silme talebi
+    document.querySelectorAll(".requestDeleteBtn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        if (
+          !confirm(
+            "Bu post için silme talebi oluşturulsun mu? Post anında yayından kalkacaktır."
+          )
+        )
+          return;
+        const reason =
+          prompt("İstersen bir sebep yaz (boş bırakabilirsin):") || null;
+
+        const res = await fetch(`${API_BASE}/posts/${id}/request-delete`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ reason }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "Silme talebi oluşturulamadı");
+          return;
+        }
+        alert(data.message || "Silme talebi oluşturuldu.");
+        loadMyPosts(); // yazar listeden düşer
+      });
+    });
   }
 
   async function publishPost(id) {
@@ -145,100 +173,31 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
     if (res.ok) {
       alert("Post yayınlandı!");
       loadMyPosts();
+      if (isAdmin()) loadDeleteRequests();
     } else {
       alert(data.error || "Hata");
     }
   }
 
-  // Yazar: Silme talebi
-  async function requestDeletePost(id) {
-    if (
-      !confirm(
-        "Bu postu silmek istediğinize emin misiniz? (Admin onayıyla kalıcı silinecek)"
-      )
-    )
+  async function deletePost(id) {
+    if (!confirm("Bu postu KALICI olarak silmek istediğinize emin misiniz?"))
       return;
-    const res = await fetch(`${API_BASE}/posts/${id}/request-delete`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      alert(
-        data.message || "Silme talebi oluşturuldu. Post yayından kaldırıldı."
-      );
-      loadMyPosts(); // yazardan kaybolsun
-    } else {
-      alert(data.error || "Hata");
-    }
-  }
-
-  // Admin: Kalıcı sil
-  async function adminPermanentDelete(id) {
-    if (!confirm("Bu post kalıcı olarak silinsin mi?")) return;
-    const res = await fetch(`${API_BASE}/posts/${id}/permanent`, {
+    const res = await fetch(`${API_BASE}/posts/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
     if (res.ok) {
-      alert(data.message || "Kalıcı silindi");
+      alert("Post silindi!");
       loadMyPosts();
+      if (isAdmin()) loadDeleteRequests();
     } else {
       alert(data.error || "Hata");
     }
-  }
-
-  // Admin: Silme talepleri
-  async function loadDeleteRequests() {
-    const section = document.getElementById("deleteRequestsSection");
-    const tbody = document.querySelector("#deleteRequestsTable tbody");
-    if (!section || !tbody) return;
-
-    const res = await fetch(`${API_BASE}/delete-requests`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const list = await res.json();
-
-    tbody.innerHTML = "";
-    list.forEach((r) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${r.post_id}</td>
-        <td>${r.title}</td>
-        <td>${r.author}</td>
-        <td>${r.requested_by}</td>
-        <td>${r.reason || ""}</td>
-        <td>${new Date(r.requested_at).toLocaleDateString()}</td>
-        <td><button class="approveDeleteBtn" data-post="${
-          r.post_id
-        }">Tamamen Sil</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    document.querySelectorAll(".approveDeleteBtn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const postId = btn.dataset.post;
-        if (!confirm("Bu post kalıcı olarak silinsin mi?")) return;
-        const res = await fetch(`${API_BASE}/posts/${postId}/permanent`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          alert(data.message || "Post kalıcı olarak silindi");
-          loadDeleteRequests();
-          loadMyPosts();
-        } else {
-          alert(data.error || "Hata");
-        }
-      });
-    });
   }
 
   async function openEditForm(id) {
@@ -247,15 +206,14 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
+        const errData = await res.json();
         alert(errData.error || "Post bulunamadı");
         return;
       }
       const post = await res.json();
 
-      // Admin değilse ve kendi postu değilse
-      if (!isAdmin() && post.author !== user.username) {
-        alert("Yetkiniz yok");
+      if (!post || (post.author !== user.username && !isAdmin())) {
+        alert("Post bulunamadı veya yetkiniz yok");
         return;
       }
 
@@ -267,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <td colspan="5">
           <div class="edit-form">
             <label>Başlık</label>
-            <input type="text" id="editTitle" value="${escapeHtml(post.title)}">
+            <input type="text" id="editTitle" value="${post.title}">
             <label>İçerik</label>
             <div id="editQuill"></div>
             <label>Durum</label>
@@ -325,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }),
           });
 
-          const data = await updateRes.json().catch(() => ({}));
+          const data = await updateRes.json();
           if (updateRes.ok) {
             alert(
               updatedStatus === "draft"
@@ -333,6 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 : "Post yayınlandı!"
             );
             loadMyPosts();
+            if (isAdmin()) loadDeleteRequests();
             editRow.remove();
           } else {
             alert(data.error || "Güncelleme hatası");
@@ -343,17 +302,17 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Sunucu hatası");
     }
   }
+
+  function isAdmin() {
+    return user && user.role === "admin";
+  }
+
+  // Admin: Silme Talepleri tablosu
   async function loadDeleteRequests() {
     try {
-      const res = await fetch(
-        `${
-          (window.APP_CONFIG && window.APP_CONFIG.API_BASE) ||
-          window.location.origin
-        }/delete-requests`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await fetch(`${API_BASE}/delete-requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("Silme talepleri alınamadı");
       const rows = await res.json();
 
@@ -364,24 +323,23 @@ document.addEventListener("DOMContentLoaded", () => {
       rows.forEach((r) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-        <td data-label="Post ID">${r.post_id}</td>
-        <td data-label="Başlık">${r.title || "-"}</td>
-        <td data-label="Yazar">${r.author || "-"}</td>
-        <td data-label="Talep Eden">${r.requested_by || "-"}</td>
-        <td data-label="Sebep">${r.reason || "-"}</td>
-        <td data-label="Talep Tarihi">${new Date(
-          r.requested_at
-        ).toLocaleString()}</td>
-        <td data-label="İşlem">
-          <button class="hardDeleteBtn" data-pid="${
-            r.post_id
-          }">Tamamen Sil</button>
-        </td>
-      `;
+          <td data-label="Post ID">${r.post_id}</td>
+          <td data-label="Başlık">${r.title || "-"}</td>
+          <td data-label="Yazar">${r.author || "-"}</td>
+          <td data-label="Talep Eden">${r.requested_by || "-"}</td>
+          <td data-label="Sebep">${r.reason || "-"}</td>
+          <td data-label="Talep Tarihi">${new Date(
+            r.requested_at
+          ).toLocaleString()}</td>
+          <td data-label="İşlem">
+            <button class="hardDeleteBtn" data-pid="${
+              r.post_id
+            }">Tamamen Sil</button>
+          </td>
+        `;
         tbody.appendChild(tr);
       });
 
-      // Butonlar
       document.querySelectorAll(".hardDeleteBtn").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const pid = btn.dataset.pid;
@@ -391,25 +349,18 @@ document.addEventListener("DOMContentLoaded", () => {
             )
           )
             return;
-          const delRes = await fetch(
-            `${
-              (window.APP_CONFIG && window.APP_CONFIG.API_BASE) ||
-              window.location.origin
-            }/posts/${pid}`,
-            {
-              method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          const delRes = await fetch(`${API_BASE}/posts/${pid}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
           const data = await delRes.json();
           if (!delRes.ok) {
             alert(data.error || "Silme sırasında hata");
             return;
           }
           alert("Post kalıcı olarak silindi.");
-          // Tabloları yenile
-          loadMyPosts(); // admin tüm postlar tablosu
-          loadDeleteRequests(); // silme talepleri
+          loadMyPosts();
+          loadDeleteRequests();
         });
       });
     } catch (e) {
@@ -420,24 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function escapeHtml(s = "") {
-    return s.replace(
-      /[&<>'"]/g,
-      (c) =>
-        ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          "'": "&#39;",
-          '"': "&quot;",
-        }[c])
-    );
-  }
-
-  function isAdmin() {
-    return user?.role === "admin";
-  }
-
+  // Başlangıç yüklemeleri
   loadMyPosts();
   if (isAdmin()) {
     const sec = document.getElementById("delete-requests-section");

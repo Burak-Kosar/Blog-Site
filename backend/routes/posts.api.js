@@ -8,7 +8,7 @@ const fs = require("fs");
 const path = require("path");
 
 /**
- * 1) Yayınlanmış postları listele (sayfalı)
+ * 1) Yayınlanmış postları getir (sayfalı)
  */
 router.get("/posts", (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -17,11 +17,11 @@ router.get("/posts", (req, res) => {
 
   const sqlCount = `SELECT COUNT(*) AS total FROM posts WHERE status = 'published'`;
   const sqlPosts = `
-    SELECT posts.*, users.username AS author
-    FROM posts
-    JOIN users ON posts.author_id = users.id
-    WHERE posts.status = 'published'
-    ORDER BY created_at DESC
+    SELECT p.*, u.username AS author
+    FROM posts p
+    JOIN users u ON p.author_id = u.id
+    WHERE p.status = 'published'
+    ORDER BY p.created_at DESC
     LIMIT ? OFFSET ?
   `;
 
@@ -39,16 +39,16 @@ router.get("/posts", (req, res) => {
 });
 
 /**
- * 2) Yayınlanmış tek post (prev/next ile)
+ * 2) Tek yayınlanmış post (prev/next ile)
  */
 router.get("/posts/:id", (req, res) => {
   const postId = parseInt(req.params.id, 10);
 
   const sql = `
-    SELECT posts.*, users.username AS author
-    FROM posts
-    JOIN users ON posts.author_id = users.id
-    WHERE posts.id = ? AND posts.status = 'published'
+    SELECT p.*, u.username AS author
+    FROM posts p
+    JOIN users u ON p.author_id = u.id
+    WHERE p.id = ? AND p.status = 'published'
   `;
 
   db.query(sql, [postId], (err, results) => {
@@ -116,6 +116,7 @@ router.post(
 
 /**
  * 4) Kullanıcının kendi postları
+ * (Silme talebi olanları GİZLE)
  */
 router.get("/my-posts", authMiddleware, (req, res) => {
   const sql = `
@@ -123,9 +124,7 @@ router.get("/my-posts", authMiddleware, (req, res) => {
     FROM posts p
     JOIN users u ON p.author_id = u.id
     WHERE p.author_id = ?
-      AND NOT EXISTS (
-        SELECT 1 FROM delete_requests dr WHERE dr.post_id = p.id
-      )
+      AND NOT EXISTS (SELECT 1 FROM delete_requests dr WHERE dr.post_id = p.id)
     ORDER BY p.created_at DESC
   `;
   db.query(sql, [req.user.id], (err, results) => {
@@ -134,19 +133,20 @@ router.get("/my-posts", authMiddleware, (req, res) => {
   });
 });
 
-
 /**
  * 5) Tüm postlar (admin)
+ * (Silme talebi olanları GİZLE)
  */
 router.get("/all-posts", authMiddleware, (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Yetkiniz yok" });
   }
   const sql = `
-    SELECT posts.*, users.username AS author
-    FROM posts
-    JOIN users ON posts.author_id = users.id
-    ORDER BY created_at DESC
+    SELECT p.*, u.username AS author
+    FROM posts p
+    JOIN users u ON p.author_id = u.id
+    WHERE NOT EXISTS (SELECT 1 FROM delete_requests dr WHERE dr.post_id = p.id)
+    ORDER BY p.created_at DESC
   `;
   db.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: "Veritabanı hatası" });
@@ -156,20 +156,23 @@ router.get("/all-posts", authMiddleware, (req, res) => {
 
 /**
  * 6) Taslaklar
+ * (Silme talebi olanları GİZLE)
  */
 router.get("/posts/drafts", authMiddleware, (req, res) => {
   let sql = `
-    SELECT posts.*, users.username AS author
-    FROM posts
-    JOIN users ON posts.author_id = users.id
-    WHERE posts.status = 'draft'
+    SELECT p.*, u.username AS author
+    FROM posts p
+    JOIN users u ON p.author_id = u.id
+    WHERE p.status = 'draft'
+      AND NOT EXISTS (SELECT 1 FROM delete_requests dr WHERE dr.post_id = p.id)
   `;
-  let params = [];
+  const params = [];
   if (req.user.role !== "admin") {
-    sql += ` AND posts.author_id = ?`;
+    sql += ` AND p.author_id = ?`;
     params.push(req.user.id);
   }
-  sql += ` ORDER BY created_at DESC`;
+  sql += ` ORDER BY p.created_at DESC`;
+
   db.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ error: "Veritabanı hatası" });
     res.json(results);
@@ -194,8 +197,11 @@ router.patch("/posts/:id/publish", authMiddleware, (req, res) => {
       return res.status(404).json({ error: "Post bulunamadı" });
 
     const updateSql = `UPDATE posts SET status = 'published', updated_at = NOW() WHERE id = ?`;
-    db.query(updateSql, [postId], (err2) => {
+    db.query(updateSql, [postId], (err2, result) => {
       if (err2) return res.status(500).json({ error: "Güncelleme hatası" });
+      if (result.affectedRows === 0) {
+        return res.status(400).json({ error: "Post zaten yayınlanmış" });
+      }
       res.json({ success: true, message: "Post yayınlandı" });
     });
   });
@@ -227,8 +233,11 @@ router.put("/posts/:id", authMiddleware, (req, res) => {
       SET title = ?, content = ?, status = ?, updated_at = NOW()
       WHERE id = ?
     `;
-    db.query(updateSql, [title, content, status, postId], (err2) => {
+    db.query(updateSql, [title, content, status, postId], (err2, result) => {
       if (err2) return res.status(500).json({ error: "Güncelleme hatası" });
+      if (result.affectedRows === 0) {
+        return res.status(400).json({ error: "Post güncellenemedi" });
+      }
       res.json({ success: true, message: "Post güncellendi" });
     });
   });
@@ -242,6 +251,7 @@ router.delete("/posts/:id", authMiddleware, (req, res) => {
     return res.status(403).json({ error: "Yetkiniz yok" });
   }
   const postId = req.params.id;
+
   db.query(`SELECT image FROM posts WHERE id = ?`, [postId], (err, results) => {
     if (err) return res.status(500).json({ error: "Veritabanı hatası" });
     if (results.length === 0)
@@ -251,13 +261,13 @@ router.delete("/posts/:id", authMiddleware, (req, res) => {
       ? results[0].image.replace(/^\//, "")
       : null;
 
-    db.query(`DELETE FROM posts WHERE id = ?`, [postId], (err2) => {
+    db.query(`DELETE FROM posts WHERE id = ?`, [postId], (err2, result) => {
       if (err2) return res.status(500).json({ error: "Veritabanı hatası" });
+      if (result.affectedRows === 0)
+        return res.status(404).json({ error: "Post bulunamadı" });
 
       if (imagePath && fs.existsSync(imagePath)) {
-        try {
-          fs.unlinkSync(imagePath);
-        } catch (_) {}
+        fs.unlinkSync(imagePath);
       }
 
       res.json({ success: true, message: "Post silindi" });
@@ -266,124 +276,86 @@ router.delete("/posts/:id", authMiddleware, (req, res) => {
 });
 
 /**
- * 10) Yazar: Silme talebi oluştur (post delete_requests'e kaydolur, post yayından kalkar)
+ * 10) (YENİ) Silme talebi: yazar/admin tetikler
+ *  - Post 'draft' yapılır
+ *  - delete_requests'e kayıt düşer (varsa tekrar düşülmez)
  */
 router.post("/posts/:id/request-delete", authMiddleware, (req, res) => {
   const postId = parseInt(req.params.id, 10);
+  const reason = req.body && req.body.reason ? String(req.body.reason) : null;
 
-  // Yalnızca kendi postu için
-  const checkSql = `SELECT * FROM posts WHERE id = ? AND author_id = ?`;
-  db.query(checkSql, [postId, req.user.id], (err, rows) => {
-    if (err) return res.status(500).json({ error: "Veritabanı hatası" });
-    if (rows.length === 0)
-      return res
-        .status(404)
-        .json({ error: "Post bulunamadı veya yetkiniz yok" });
-
-    const post = rows[0];
-
-    // Aynı post için bekleyen talep var mı?
-    const existsSql = `SELECT id FROM delete_requests WHERE post_id = ? LIMIT 1`;
-    db.query(existsSql, [postId], (e2, ex) => {
-      if (e2) return res.status(500).json({ error: "Veritabanı hatası" });
-      if (ex.length > 0) {
-        // zaten kayıt var ise sadece yayından kaldırmayı garanti edelim
-        const upd = `UPDATE posts SET status='draft', updated_at = NOW() WHERE id = ?`;
-        return db.query(upd, [postId], () =>
-          res.json({
-            message: "Silme talebi zaten mevcut, post yayından kaldırıldı.",
-          })
-        );
-      }
-
-      // Talebi kaydet
-      const insSql = `
-        INSERT INTO delete_requests (post_id, author_id, requested_by, reason)
-        VALUES (?, ?, ?, NULL)
-      `;
-      db.query(insSql, [post.id, post.author_id, req.user.id], (e3) => {
-        if (e3) {
-          //console.error("delete_requests insert error:", e3); // <--- TEŞHİS LOGU
-          return res.status(500).json({ error: "Silme talebi kaydedilemedi" });
-        }
-
-        // Post'u anasayfadan kaldır (draft)
-        const updSql = `UPDATE posts SET status='draft', updated_at = NOW() WHERE id = ?`;
-        db.query(updSql, [post.id], (e4) => {
-          if (e4) return res.status(500).json({ error: "Post güncellenemedi" });
-          return res.json({
-            message: "Silme talebi oluşturuldu, post yayından kaldırıldı.",
-          });
-        });
-      });
-    });
-  });
-});
-
-/**
- * 11) Admin: Bekleyen silme talepleri listesi
- */
-router.get("/delete-requests", authMiddleware, (req, res) => {
-  if (req.user.role !== "admin")
-    return res.status(403).json({ error: "Yetkiniz yok" });
-
-  const sql = `
-    SELECT dr.id AS request_id,
-           p.id AS post_id,
-           p.title,
-           u.username AS author,
-           r.username AS requested_by,
-           dr.reason,
-           dr.requested_at
-    FROM delete_requests dr
-    JOIN posts p ON dr.post_id = p.id
-    JOIN users u ON p.author_id = u.id
-    JOIN users r ON dr.requested_by = r.id
-    ORDER BY dr.requested_at DESC
-  `;
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: "Veritabanı hatası" });
-    res.json(results);
-  });
-});
-
-/**
- * 12) Admin: Kalıcı sil (post + görsel + delete_requests kaydı)
- */
-router.delete("/posts/:id/permanent", authMiddleware, (req, res) => {
-  if (req.user.role !== "admin")
-    return res.status(403).json({ error: "Yetkiniz yok" });
-  const postId = parseInt(req.params.id, 10);
-
-  db.query(`SELECT image FROM posts WHERE id = ?`, [postId], (err, rows) => {
-    if (err) return res.status(500).json({ error: "Veritabanı hatası" });
+  // Postu getir
+  db.query(`SELECT * FROM posts WHERE id = ?`, [postId], (e1, rows) => {
+    if (e1) return res.status(500).json({ error: "Veritabanı hatası" });
     if (rows.length === 0)
       return res.status(404).json({ error: "Post bulunamadı" });
 
-    const imagePath = rows[0].image ? rows[0].image.replace(/^\//, "") : null;
+    const post = rows[0];
 
-    db.query(`DELETE FROM posts WHERE id = ?`, [postId], (e2) => {
-      if (e2) return res.status(500).json({ error: "Post silinemedi" });
+    // Yetki: admin veya postun yazarı
+    if (req.user.role !== "admin" && req.user.id !== post.author_id) {
+      return res.status(403).json({ error: "Yetkiniz yok" });
+    }
 
-      if (imagePath && fs.existsSync(imagePath)) {
-        try {
-          fs.unlinkSync(imagePath);
-        } catch (_) {}
+    // Zaten talep var mı?
+    db.query(
+      `SELECT id FROM delete_requests WHERE post_id = ?`,
+      [postId],
+      (e2, dr) => {
+        if (e2) return res.status(500).json({ error: "Veritabanı hatası" });
+
+        const doInsert = () => {
+          const insSql = `
+          INSERT INTO delete_requests (post_id, author_id, requested_by, reason)
+          VALUES (?, ?, ?, ?)
+        `;
+          db.query(
+            insSql,
+            [post.id, post.author_id, req.user.id, reason],
+            (e3) => {
+              if (e3) {
+                console.error("delete_requests insert error:", e3);
+                return res
+                  .status(500)
+                  .json({ error: "Silme talebi kaydedilemedi" });
+              }
+              return res.json({
+                success: true,
+                message: "Silme talebi kaydedildi",
+              });
+            }
+          );
+        };
+
+        // Postu draft yap
+        db.query(
+          `UPDATE posts SET status='draft', updated_at = NOW() WHERE id = ?`,
+          [postId],
+          (eUpd) => {
+            if (eUpd)
+              return res
+                .status(500)
+                .json({ error: "Post yayından kaldırılamadı" });
+
+            if (dr.length > 0) {
+              // Zaten talep var → sadece mesaj
+              return res.json({
+                success: true,
+                message: "Zaten silme talebi mevcut, post yayından kaldırıldı",
+              });
+            }
+            // Talep yoksa ekle
+            doInsert();
+          }
+        );
       }
-
-      db.query(
-        `DELETE FROM delete_requests WHERE post_id = ?`,
-        [postId],
-        () => {
-          return res.json({
-            success: true,
-            message: "Post kalıcı olarak silindi.",
-          });
-        }
-      );
-    });
+    );
   });
-});// Admin: Silme talepleri listesi
+});
+
+/**
+ * 11) (YENİ) Admin için silme talepleri listesi
+ */
 router.get("/delete-requests", authMiddleware, (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Yetkiniz yok" });
@@ -410,6 +382,5 @@ router.get("/delete-requests", authMiddleware, (req, res) => {
     res.json(rows);
   });
 });
-
 
 module.exports = router;
