@@ -119,17 +119,21 @@ router.post(
  */
 router.get("/my-posts", authMiddleware, (req, res) => {
   const sql = `
-    SELECT posts.*, users.username AS author
-    FROM posts
-    JOIN users ON posts.author_id = users.id
-    WHERE posts.author_id = ?
-    ORDER BY created_at DESC
+    SELECT p.*, u.username AS author
+    FROM posts p
+    JOIN users u ON p.author_id = u.id
+    WHERE p.author_id = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM delete_requests dr WHERE dr.post_id = p.id
+      )
+    ORDER BY p.created_at DESC
   `;
   db.query(sql, [req.user.id], (err, results) => {
     if (err) return res.status(500).json({ error: "Veritabanı hatası" });
     res.json(results);
   });
 });
+
 
 /**
  * 5) Tüm postlar (admin)
@@ -379,6 +383,33 @@ router.delete("/posts/:id/permanent", authMiddleware, (req, res) => {
       );
     });
   });
+});// Admin: Silme talepleri listesi
+router.get("/delete-requests", authMiddleware, (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Yetkiniz yok" });
+  }
+
+  const sql = `
+    SELECT 
+      dr.id AS request_id,
+      p.id AS post_id,
+      p.title,
+      u1.username AS author,
+      u2.username AS requested_by,
+      dr.reason,
+      dr.requested_at
+    FROM delete_requests dr
+    JOIN posts p   ON dr.post_id = p.id
+    JOIN users u1  ON p.author_id = u1.id
+    JOIN users u2  ON dr.requested_by = u2.id
+    ORDER BY dr.requested_at DESC
+  `;
+
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ error: "Veritabanı hatası" });
+    res.json(rows);
+  });
 });
+
 
 module.exports = router;
